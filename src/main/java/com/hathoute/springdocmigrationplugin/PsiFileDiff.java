@@ -6,38 +6,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PsiFileDiff {
-
-  public interface PsiAction {
-    void run();
-  }
+public final class PsiFileDiff {
 
   private static final Map<PsiFile, PsiFileDiff> instances = new HashMap<>();
 
   public static PsiFileDiff getInstance(final PsiFile file) {
-    return instances.computeIfAbsent(file, PsiFileDiff::new);
+    return instances.computeIfAbsent(file, f -> new PsiFileDiff());
   }
 
-  private final PsiFile file;
-  private final List<PsiAction> sfActions = new ArrayList<>();
-  private final List<PsiAction> sdActions = new ArrayList<>();
-  private PsiFileDiff(final PsiFile file) {
-    this.file = file;
+  private final List<Runnable> sfActions = new ArrayList<>();
+  private final List<Runnable> sdActions = new ArrayList<>();
+
+  private PsiFileDiff() {
   }
 
-  public synchronized void addSfAction(final PsiAction action) {
+  public void addSfAction(final Runnable action) {
     sfActions.add(action);
   }
 
-  public synchronized void addSdAction(final PsiAction action) {
+  public void addSdAction(final Runnable action) {
     sdActions.add(action);
   }
 
-  public synchronized List<PsiAction> getSfActions() {
+  public List<Runnable> getSfActions() {
     return Collections.unmodifiableList(sfActions);
   }
 
-  public synchronized List<PsiAction> getSdActions() {
+  public List<Runnable> getSdActions() {
     return Collections.unmodifiableList(sdActions);
   }
 }

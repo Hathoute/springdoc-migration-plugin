@@ -1,7 +1,6 @@
 package com.hathoute.springdocmigrationplugin.processor;
 import com.hathoute.springdocmigrationplugin.PsiContext;
 import com.hathoute.springdocmigrationplugin.PsiFileDiff;
-import com.hathoute.springdocmigrationplugin.PsiFileDiff.PsiAction;
 import com.hathoute.springdocmigrationplugin.PsiMigrationsHelper;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
@@ -42,8 +41,8 @@ public class PsiFileProcessor implements PsiElementProcessor<PsiFile> {
       processor.process();
     }
 
-    diff.getSfActions().forEach(PsiAction::run);
+    diff.getSfActions().forEach(Runnable::run);
     PsiMigrationsHelper.removeSpringfoxImports();
-    diff.getSdActions().forEach(PsiAction::run);
+    diff.getSdActions().forEach(Runnable::run);
   }
 }
