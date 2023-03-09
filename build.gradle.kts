@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.13.0"
+    id("org.jetbrains.intellij") version "1.13.1"
 }
 
 group = "com.hathoute"
@@ -13,7 +13,7 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2022.1.4")
+    version.set("2022.3.2")
 
     plugins.set(listOf("com.intellij.java"))
 }
@@ -25,8 +25,8 @@ java {
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
 
     buildSearchableOptions {
@@ -35,13 +35,6 @@ tasks {
 
     patchPluginXml {
         version.set("${project.version}")
-        sinceBuild.set("221")
-        untilBuild.set("223.*")
-    }
-
-    patchPluginXml {
-        sinceBuild.set("221")
-        untilBuild.set("231.*")
     }
 
     signPlugin {
