@@ -78,11 +78,15 @@ public final class PsiMigrationsHelper {
   public static void migrateApiOperationAnnotation(final PsiMethod psiMethod, final PsiAnnotation apiOperation) {
     final var diff = diff();
     final var apiOperationValue = apiOperation.findDeclaredAttributeValue("value");
+    final var apiOperationNotes = apiOperation.findDeclaredAttributeValue("notes");
 
     diff.addSdAction(() -> {
       final var operation = addAnnotation(psiMethod, SD_OPERATION_ANNOTATION);
       if (apiOperationValue != null) {
         operation.setDeclaredAttributeValue("summary", apiOperationValue);
+      }
+      if (apiOperationNotes != null) {
+        operation.setDeclaredAttributeValue("description", apiOperationNotes);
       }
     });
 
@@ -185,10 +189,11 @@ public final class PsiMigrationsHelper {
       if (apiModelPropertyExample != null) {
         parameter.setDeclaredAttributeValue("example", apiModelPropertyExample);
       }
-      if (apiModelPropertyRequired != null && apiModelPropertyRequired instanceof PsiLiteralValue) {
-        final var value = ((PsiLiteralValue) apiModelPropertyRequired).getValue();
+      if (apiModelPropertyRequired instanceof PsiLiteralValue psiLiteralValue) {
+        final var value = psiLiteralValue.getValue();
         if (value instanceof Boolean) {
-          parameter.setDeclaredAttributeValue("requiredMode", createSchemaRequiredMode(psiField, (boolean)value));
+          parameter.setDeclaredAttributeValue("requiredMode",
+              createSchemaRequiredMode(psiField, (boolean) value));
         }
       }
     });
@@ -209,7 +214,8 @@ public final class PsiMigrationsHelper {
   }
 
   private static PsiAnnotation convertApiResponseAnnotation(final PsiAnnotation apiResponse) {
-    final var response = createAnnotation("@%s", SD_APIRESPONSE_ANNOTATION, apiResponse.getParent());
+    final var response = createAnnotation("@%s", SD_APIRESPONSE_ANNOTATION,
+        apiResponse.getParent());
 
     final var apiResponseCode = apiResponse.findDeclaredAttributeValue("code");
     final var apiResponseMessage = apiResponse.findDeclaredAttributeValue("message");
@@ -219,12 +225,11 @@ public final class PsiMigrationsHelper {
       return response;
     }
 
-    if(apiResponseCode instanceof PsiLiteralValue) {
-      final var value = ((PsiLiteralValue) apiResponseCode).getValue();
+    if (apiResponseCode instanceof PsiLiteralValue psiLiteralValue) {
+      final var value = psiLiteralValue.getValue();
       response.setDeclaredAttributeValue("responseCode",
           createStringLiteral(response, String.valueOf(value)));
-    }
-    else {
+    } else {
       response.setDeclaredAttributeValue("responseCode", apiResponseCode);
     }
 
@@ -238,14 +243,14 @@ public final class PsiMigrationsHelper {
 
   private static PsiAnnotation addAnnotation(final PsiElement element, final String qualifiedName) {
     final PsiModifierList owner;
-    if (element instanceof PsiClass) {
-      owner = ((PsiClass) element).getModifierList();
-    } else if (element instanceof PsiMethod) {
-      owner = ((PsiMethod) element).getModifierList();
-    } else if (element instanceof PsiField) {
-      owner = ((PsiField) element).getModifierList();
-    } else if (element instanceof PsiParameter) {
-      owner = ((PsiParameter) element).getModifierList();
+    if (element instanceof PsiClass psiClass) {
+      owner = psiClass.getModifierList();
+    } else if (element instanceof PsiMethod psiMethod) {
+      owner = psiMethod.getModifierList();
+    } else if (element instanceof PsiField psiField) {
+      owner = psiField.getModifierList();
+    } else if (element instanceof PsiParameter psiParameter) {
+      owner = psiParameter.getModifierList();
     } else {
       throw new IllegalArgumentException("Unsupported element type: " + element.getClass());
     }

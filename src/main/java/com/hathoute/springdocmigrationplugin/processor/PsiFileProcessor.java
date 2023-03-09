@@ -2,8 +2,21 @@ package com.hathoute.springdocmigrationplugin.processor;
 import com.hathoute.springdocmigrationplugin.PsiContext;
 import com.hathoute.springdocmigrationplugin.PsiFileDiff;
 import com.hathoute.springdocmigrationplugin.PsiMigrationsHelper;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiImportList;
+import com.intellij.psi.PsiImportStatement;
 import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiRecursiveElementVisitor;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Objects;
+import java.util.Optional;
+import org.jetbrains.annotations.NotNull;
 
 public class PsiFileProcessor implements PsiElementProcessor<PsiFile> {
 
@@ -35,14 +48,48 @@ public class PsiFileProcessor implements PsiElementProcessor<PsiFile> {
 
     PsiContext.getInstance().setFileProcessor(this);
 
-    final var classes = getFile().getClasses();
-    for (final var clazz : classes) {
-      final var processor = new PsiClassProcessor(clazz);
-      processor.process();
+    final var javaFile = getFile();
+    final var hasSpringfox = Optional.ofNullable(javaFile.getImportList())
+        .map(PsiImportList::getImportStatements)
+        .map(Arrays::stream)
+        .map(s -> s.map(PsiImportStatement::getQualifiedName)
+            .filter(Objects::nonNull)
+            .anyMatch(qn -> qn.startsWith("io.swagger.annotations")))
+        .orElse(false);
+
+    if (!hasSpringfox) {
+      return;
     }
+
+    final var migrationVisitor = new MigrationVisitor();
+    javaFile.acceptChildren(migrationVisitor);
+
+    migrationVisitor.processors.forEach(PsiElementProcessor::process);
 
     diff.getSfActions().forEach(Runnable::run);
     PsiMigrationsHelper.removeSpringfoxImports();
     diff.getSdActions().forEach(Runnable::run);
+  }
+
+  static final class MigrationVisitor extends PsiRecursiveElementVisitor {
+    private final Collection<PsiElementProcessor<?>> processors;
+
+    private MigrationVisitor() {
+      processors = new ArrayList<>();
+    }
+
+    @Override
+    public void visitElement(@NotNull final PsiElement element) {
+      if (element instanceof PsiClass klass) {
+        processors.add(new PsiClassProcessor(klass));
+        super.visitElement(element);
+      } else if (element instanceof PsiMethod method) {
+        processors.add(new PsiMethodProcessor(method));
+        super.visitElement(element);
+      } else if (element instanceof PsiField field) {
+        processors.add(new PsiFieldProcessor(field));
+        super.visitElement(element);
+      }
+    }
   }
 }

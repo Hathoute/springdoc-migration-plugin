@@ -12,16 +12,9 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 public class PsiMethodProcessor implements PsiElementProcessor<PsiMethod> {
-
-  private static final Set<String> SF_ANNOTATIONS = Set.of(
-      SF_APIOPERATION_ANNOTATION,
-      SF_APIRESPONSE_ANNOTATION,
-      SF_APIRESPONSES_ANNOTATION
-  );
 
   private final PsiMethod method;
 
@@ -37,8 +30,9 @@ public class PsiMethodProcessor implements PsiElementProcessor<PsiMethod> {
   @Override
   public void process() {
     final var annotations = Arrays.stream(method.getAnnotations())
-        .filter(a -> SF_ANNOTATIONS.contains(a.getQualifiedName()))
-        .collect(Collectors.toList());
+        .filter(a -> Objects.nonNull(a.getQualifiedName()))
+        .filter(a -> a.getQualifiedName().startsWith("io.swagger.annotations"))
+        .toList();
 
     annotations.forEach(this::migrateAnnotation);
 
@@ -46,27 +40,20 @@ public class PsiMethodProcessor implements PsiElementProcessor<PsiMethod> {
     final var paramAnnotations = Arrays.stream(parameters)
         .map(PsiParameter::getAnnotations)
         .flatMap(Arrays::stream)
+        .filter(a -> Objects.nonNull(a.getQualifiedName()))
         .filter(a -> a.getQualifiedName().equals(SF_APIPARAM_ANNOTATION))
-        .collect(Collectors.toList());
+        .toList();
     paramAnnotations.forEach(PsiMigrationsHelper::migrateApiParam);
   }
 
   private void migrateAnnotation(final PsiAnnotation annotation) {
     final var qualifiedName = annotation.getQualifiedName();
-    if (qualifiedName == null) {
-      return;
-    }
-
     switch (qualifiedName) {
-      case SF_APIOPERATION_ANNOTATION:
-        migrateApiOperationAnnotation(method, annotation);
-        break;
-      case SF_APIRESPONSE_ANNOTATION:
-        migrateApiResponseAnnotation(method, annotation);
-        break;
-      case SF_APIRESPONSES_ANNOTATION:
-        migrateApiResponsesAnnotation(method, annotation);
-        break;
+      case SF_APIOPERATION_ANNOTATION -> migrateApiOperationAnnotation(method, annotation);
+      case SF_APIRESPONSE_ANNOTATION -> migrateApiResponseAnnotation(method, annotation);
+      case SF_APIRESPONSES_ANNOTATION -> migrateApiResponsesAnnotation(method, annotation);
+      default -> throw new UnsupportedOperationException(
+          "Migration of annotation '%s' is not supported on a method".formatted(qualifiedName));
     }
   }
 }
